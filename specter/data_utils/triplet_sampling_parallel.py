@@ -51,6 +51,10 @@ def _get_triplet(query):
         return
     # self.coviews[query] is a dictionary of format {paper_id: {count: 1, frac: 1}}
     candidates = [(k, v['count']) for k, v in _coviews[query].items()]
+    
+    if len(candidates) == 0:
+        return
+    
     candidates = sorted(candidates, key=operator.itemgetter(1), reverse=True)
     if len(candidates) > 1:
         coview_spread = candidates[0][1] - candidates[-1][1]
