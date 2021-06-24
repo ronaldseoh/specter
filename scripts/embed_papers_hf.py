@@ -6,6 +6,8 @@ import argparse
 from tqdm.auto import tqdm
 import pathlib
 
+from pytorch_lightning_training_script.train import Specter
+
 class Dataset:
 
     def __init__(self, data_path, max_length=512, batch_size=32):
@@ -45,8 +47,16 @@ class Dataset:
 
 class Model:
 
-    def __init__(self):
-        self.model = AutoModel.from_pretrained('allenai/specter')
+    def __init__(self, pl_checkpoint_path):
+        if pl_checkpoint_path is not None:
+            # Load the Lightning module first from the checkpoint
+            pl_model = Specter.load_from_checkpoint(pl_checkpoint_path)
+
+            # Get the Huggingface BERT model from pl_model
+            self.model = pl_model.model
+        else:
+            self.model = AutoModel.from_pretrained('allenai/specter')
+
         self.model.to('cuda')
         self.model.eval()
 
@@ -60,10 +70,11 @@ def main():
     parser.add_argument('--output', help='path to write the output embeddings file. '
                                         'the output format is jsonlines where each line has "paper_id" and "embedding" keys')
     parser.add_argument('--batch-size', type=int, default=8, help='batch size for prediction')
+    parser.add_argument('--pl-checkpoint-path', help='path to the checkpoint saved from the PyTorch Lightning training script.')
 
     args = parser.parse_args()
     dataset = Dataset(data_path=args.data_path, batch_size=args.batch_size)
-    model = Model()
+    model = Model(args.pl_checkpoint_path)
     results = {}
     batches = []
     for batch, batch_ids in tqdm(dataset.batches(), total=len(dataset) // args.batch_size):
