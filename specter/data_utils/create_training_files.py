@@ -187,7 +187,7 @@ class TrainingInstanceGenerator:
         # )
 
     def _get_paper_features(self, paper: Optional[dict] = None) -> \
-        Tuple[List[Token], List[Token], List[Token], int, List[Token]]:
+        Tuple[List[Token], List[Token]]:
         if paper:
             paper_id = paper.get('paper_id')
             if paper_id in self.paper_feature_cache:  # This function is being called by the same paper multiple times.
