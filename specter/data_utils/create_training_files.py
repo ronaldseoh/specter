@@ -61,41 +61,11 @@ NO_VENUE = '--no_venue--'
 # global variables
 _tokenizer = None
 _token_indexers = None
-_token_indexer_author_id = None
-_token_indexer_author_position = None
-_token_indexer_venue = None
 _token_indexer_id = None
 _max_sequence_length = None
 _concat_title_abstract = None
 _data_source = None
 _included_text_fields = None
-
-MAX_NUM_AUTHORS = 5
-# ----------------
-
-def _get_author_field(authors: List[str]):
-    """
-    Converts a list of author ids to their corresponding label and positions
-    Args:
-        authors: list of authors
-
-    Returns:
-        authors and their positions
-    """
-    global _token_indexer_author_id
-    global _token_indexer_author_position
-    global _tokenizer
-    authors = ' '.join(authors)
-    authors = _tokenizer.tokenize(authors)
-    if len(authors) > MAX_NUM_AUTHORS:
-        authors = authors[:MAX_NUM_AUTHORS - 1] + [authors[-1]]
-    author_field = TextField(authors, token_indexers=_token_indexer_author_id)
-
-    author_positions = ' '.join([f'{i:02}' for i in range(len(authors))])
-    author_positions_tokens = _tokenizer.tokenize(author_positions)
-    position_field = TextField(author_positions_tokens, token_indexers=_token_indexer_author_position)
-    return author_field, position_field
-
 
 def set_values(max_sequence_length: Optional[int] = -1,
                concat_title_abstract: Optional[bool] = None,
@@ -108,9 +78,6 @@ def set_values(max_sequence_length: Optional[int] = -1,
     # as multiprocessing with class methods is slower
     global _tokenizer
     global _token_indexers
-    global _token_indexer_author_id
-    global _token_indexer_author_position
-    global _token_indexer_venue
     global _token_indexer_id
     global _max_sequence_length
     global _concat_title_abstract
@@ -120,9 +87,6 @@ def set_values(max_sequence_length: Optional[int] = -1,
     if _tokenizer is None:  # if not initialized, initialize the tokenizers and token indexers
         _tokenizer = WordTokenizer(word_splitter=BertBasicWordSplitter(do_lower_case=bert_params["do_lowercase"]))
         _token_indexers = {"bert": PretrainedBertIndexer.from_params(Params(bert_params))}
-        _token_indexer_author_id = {"tokens": SingleIdTokenIndexer(namespace='author')}
-        _token_indexer_author_position = {"tokens": SingleIdTokenIndexer(namespace='author_positions')}
-        _token_indexer_venue = {"tokens": SingleIdTokenIndexer(namespace='venue')}
         _token_indexer_id = {"tokens": SingleIdTokenIndexer(namespace='id')}
     _max_sequence_length = max_sequence_length
     _concat_title_abstract = concat_title_abstract
@@ -141,9 +105,6 @@ def get_text_tokens(title_tokens, abstract_tokens, abstract_delimiter):
 def get_instance(paper):
     global _tokenizer
     global _token_indexers
-    global _token_indexer_author_id
-    global _token_indexer_author_position
-    global _token_indexer_venue
     global _token_indexer_id
     global _max_sequence_length
     global _concat_title_abstract
@@ -168,10 +129,7 @@ def get_instance(paper):
         neg_title_tokens = get_text_tokens(neg_title_tokens, neg_abstract_tokens, abstract_delimiter)
         query_abstract_tokens = pos_abstract_tokens = neg_abstract_tokens = []
 
-    if 'authors' in included_text_fields and _max_sequence_length > 0:
-        max_seq_len = _max_sequence_length - 15  # reserve max 15 tokens for author names
-    else:
-        max_seq_len = _max_sequence_length
+    max_seq_len = _max_sequence_length
 
     if _max_sequence_length > 0:
         query_abstract_tokens = query_abstract_tokens[:max_seq_len]
@@ -181,52 +139,14 @@ def get_instance(paper):
         neg_abstract_tokens = neg_abstract_tokens[:max_seq_len]
         neg_title_tokens = neg_title_tokens[:max_seq_len]
 
-    if 'authors' in included_text_fields:
-        source_author_text = ' '.join(paper.get("query_authors") or [])
-        pos_author_text = ' '.join(paper.get("pos_authors") or [])
-        neg_author_text = ' '.join(paper.get("neg_authors") or [])
-        source_author_tokens = _tokenizer.tokenize(source_author_text)
-        pos_author_tokens = _tokenizer.tokenize(pos_author_text)
-        neg_author_tokens = _tokenizer.tokenize(neg_author_text)
-
-        author_delimiter = [Token('[unused0]')]
-
-        query_title_tokens = query_title_tokens + author_delimiter + source_author_tokens
-        pos_title_tokens = pos_title_tokens + author_delimiter + pos_author_tokens
-        neg_title_tokens = neg_title_tokens + author_delimiter + neg_author_tokens
-
-    query_venue_tokens = _tokenizer.tokenize(paper.get('query_venue') or NO_VENUE)
-    pos_venue_tokens = _tokenizer.tokenize(paper.get('pos_venue') or NO_VENUE)
-    neg_venue_tokens = _tokenizer.tokenize(paper.get('neg_venue') or NO_VENUE)
-
-    # pos_year_tokens = _tokenizer.tokenize(paper.get("pos_year"))
-    # pos_body_tokens = _tokenizer.tokenize(paper.get("pos_body"))
-    #
-    # neg_year_tokens = _tokenizer.tokenize(paper.get("neg_year"))
-    # neg_body_tokens = _tokenizer.tokenize(paper.get("neg_body"))
-
     fields = {
         "source_title": TextField(query_title_tokens, token_indexers=_token_indexers),
         "pos_title": TextField(pos_title_tokens, token_indexers=_token_indexers),
         "neg_title": TextField(neg_title_tokens, token_indexers=_token_indexers),
-        "source_venue": TextField(query_venue_tokens, token_indexers=_token_indexer_venue),
-        "pos_venue": TextField(pos_venue_tokens, token_indexers=_token_indexer_venue),
-        "neg_venue": TextField(neg_venue_tokens, token_indexers=_token_indexer_venue),
         'source_paper_id': MetadataField(paper['query_paper_id']),
         "pos_paper_id": MetadataField(paper['pos_paper_id']),
         "neg_paper_id": MetadataField(paper['neg_paper_id']),
     }
-
-    source_authors, source_author_positions = _get_author_field(paper.get("query_authors") or [])
-    pos_authors, pos_author_positions = _get_author_field(paper.get("pos_authors") or [])
-    neg_authors, neg_author_positions = _get_author_field(paper.get("neg_authors") or [])
-
-    fields['source_authors'] = source_authors
-    fields['source_author_positions'] = source_author_positions
-    fields['pos_authors'] = pos_authors
-    fields['pos_author_positions'] = pos_author_positions
-    fields['neg_authors'] = neg_authors
-    fields['neg_author_positions'] = neg_author_positions
 
     if not _concat_title_abstract:
         if query_abstract_tokens:
@@ -273,17 +193,13 @@ class TrainingInstanceGenerator:
             if paper_id in self.paper_feature_cache:  # This function is being called by the same paper multiple times.
                 return self.paper_feature_cache[paper_id]
 
-            venue = paper.get('venue') or NO_VENUE
-            year = paper.get('year') or 0
-            body = paper.get('body')
-            authors = paper.get('author-names')
-            author_ids = paper.get('authors')
-            references = paper.get('references')
-            features = paper.get('abstract'), paper.get('title'), venue, year, body, authors, references
+            features = paper.get('abstract'), paper.get('title')
+
             self.paper_feature_cache[paper_id] = features
+
             return features
         else:
-            return None, None, None, None, None, None, None
+            return None, None
 
     def get_raw_instances(self, query_ids, subset_name=None, n_jobs=10):
         """
@@ -323,32 +239,19 @@ class TrainingInstanceGenerator:
                     count_fail += 1
                     continue
 
-                query_abstract, query_title, query_venue, query_year, query_body, query_authors, query_refs = \
-                    self._get_paper_features(query_paper)
-                pos_abstract, pos_title, pos_venue, pos_year, pos_body, pos_authors, pos_refs = self._get_paper_features(pos_paper)
-                neg_abstract, neg_title, neg_venue, neg_year, neg_body, neg_authors, neg_refs = self._get_paper_features(neg_paper)
+                query_abstract, query_title = self._get_paper_features(query_paper)
+                pos_abstract, pos_title = self._get_paper_features(pos_paper)
+                neg_abstract, neg_title = self._get_paper_features(neg_paper)
 
                 instance = {
                     "query_abstract": query_abstract,
                     "query_title": query_title,
-                    "query_venue": query_venue,
-                    "query_year": query_year,
-                    "query_body": query_body,
-                    "query_authors": query_authors,
                     "query_paper_id": query_paper["paper_id"],
                     "pos_abstract": pos_abstract,
                     "pos_title": pos_title,
-                    "pos_venue": pos_venue,
-                    "pos_year": pos_year,
-                    "pos_body": pos_body,
-                    "pos_authors": pos_authors,
                     "pos_paper_id": pos_paper["paper_id"],
                     "neg_abstract": neg_abstract,
                     "neg_title": neg_title,
-                    "neg_venue": neg_venue,
-                    "neg_year": neg_year,
-                    "neg_body": neg_body,
-                    "neg_authors": neg_authors,
                     "neg_paper_id": neg_paper["paper_id"],
                     "data_source": self.data_source
                 }
