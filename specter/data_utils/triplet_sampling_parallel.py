@@ -163,6 +163,11 @@ def generate_triplets(paper_ids, coviews, margin_fraction, samples_per_query, ra
             results = list(tqdm.tqdm(p.imap(_get_triplet, query_ids), total=len(query_ids)))
     else:
         raise RuntimeError(f"bad argument `n_jobs`={n_jobs}, `n_jobs` should be -1 or >0")
+
+    # Shuffle results. It's currently not shuffled because each example associated with one query
+    # would appear in consecutive order.
+    random.shuffle(results)
+
     for res in results:
         if res:
             for triplet in res:
