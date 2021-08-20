@@ -172,7 +172,7 @@ def generate_triplets(paper_ids, coviews, margin_fraction, samples_per_query, ra
         if results[i]:
             random.shuffle(results[i])
 
-    for res in results:
-        if res:
-            for triplet in res:
+    for i in range(len(results)):
+        if results[i]:
+            for triplet in results[i]:
                 yield triplet
