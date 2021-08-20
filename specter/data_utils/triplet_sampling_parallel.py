@@ -170,5 +170,9 @@ def generate_triplets(paper_ids, coviews, margin_fraction, samples_per_query, ra
 
     for res in results:
         if res:
+            random.shuffle(res)
+
+    for res in results:
+        if res:
             for triplet in res:
                 yield triplet
