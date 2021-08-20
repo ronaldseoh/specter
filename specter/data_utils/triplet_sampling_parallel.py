@@ -168,9 +168,9 @@ def generate_triplets(paper_ids, coviews, margin_fraction, samples_per_query, ra
     # would appear in consecutive order.
     random.shuffle(results)
 
-    for res in results:
-        if res:
-            random.shuffle(res)
+    for i in range(len(results)):
+        if results[i]:
+            random.shuffle(results[i])
 
     for res in results:
         if res:
