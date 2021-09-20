@@ -165,7 +165,6 @@ def generate_triplets(paper_ids, coviews, margin_fraction, samples_per_query, ra
     else:
         raise RuntimeError(f"bad argument `n_jobs`={n_jobs}, `n_jobs` should be -1 or >0")
 
-    logger.info(results)
     # Yield triplets in a random order. It's currently not shuffled because each example associated with one query
     # would appear in consecutive order.
     results_successful_indexes = []
@@ -179,10 +178,9 @@ def generate_triplets(paper_ids, coviews, margin_fraction, samples_per_query, ra
         for j in range(len(results[i])):
             results_index_tuples.append((i, j))
 
-    logger.info("Printing Results")
-    logger.info(results_index_tuples)
+    assert len(results_index_tuples) > 0, "Length of results_index_tuples {l} should be greater than 0".format(l=len(results_index_tuples))
     # results_index_tuples = [(i, j) for j in range(len(results[i])) for i in results_successful_indexes]
     results_iteration_order = random.sample(results_index_tuples, k=len(results_index_tuples))
-    logger.info(results_iteration_order)
+
     for i, j in results_iteration_order:
         yield results[i][j]
