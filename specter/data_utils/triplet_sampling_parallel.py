@@ -177,8 +177,11 @@ def generate_triplets(paper_ids, coviews, margin_fraction, samples_per_query, ra
     for i in results_successful_indexes:
         for j in range(len(results[i])):
             results_index_tuples.append((i, j))
+
+    print("Printing Results")
+    print(results_index_tuples)
     # results_index_tuples = [(i, j) for j in range(len(results[i])) for i in results_successful_indexes]
     results_iteration_order = random.sample(results_index_tuples, k=len(results_index_tuples))
-
+    print(results_iteration_order)
     for i, j in results_iteration_order:
         yield results[i][j]
