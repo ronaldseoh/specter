@@ -167,14 +167,9 @@ def generate_triplets(paper_ids, coviews, margin_fraction, samples_per_query, ra
 
     # Yield triplets in a random order. It's currently not shuffled because each example associated with one query
     # would appear in consecutive order.
-    results_successful_indexes = []
+    results_index_tuples = []
 
     for i in range(len(results)):
-        if results[i]:
-            results_successful_indexes.append(i)
-
-    results_index_tuples = []
-    for i in results_successful_indexes:
         for j in range(len(results[i])):
             results_index_tuples.append((i, j))
 
