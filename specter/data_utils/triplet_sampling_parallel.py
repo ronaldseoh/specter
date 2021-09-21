@@ -42,13 +42,14 @@ _ratio_hard_negatives = None
 
 # def _get_triplet(query, coviews, margin_fraction, paper_ids_set, samples_per_query, ratio_hard_negatives):
 def _get_triplet(query):
-    global _coviews
+    global _coviews  # data
     global _margin_fraction
     global _paper_ids_set
     global _samples_per_query
     global _ratio_hard_negatives
     if query not in _coviews:
-        return
+        raise KeyError(f'ID {id} should be in data.json'.format(id=query))
+
     # self.coviews[query] is a dictionary of format {paper_id: {count: 1, frac: 1}}
     candidates = [(k, v['count']) for k, v in _coviews[query].items()]
     candidates = sorted(candidates, key=operator.itemgetter(1), reverse=True)
@@ -138,12 +139,12 @@ def _get_triplet(query):
 
 
 def generate_triplets(paper_ids, coviews, margin_fraction, samples_per_query, ratio_hard_negatives, query_ids, data_subset=None, n_jobs=1):
-    global _coviews
+    global _coviews  # data
     global _margin_fraction
     global _samples_per_query
     global _ratio_hard_negatives
     global _query_ids
-    global _paper_ids_set
+    global _paper_ids_set  # metadata
 
     _coviews = coviews
     _margin_fraction = margin_fraction
@@ -172,7 +173,13 @@ def generate_triplets(paper_ids, coviews, margin_fraction, samples_per_query, ra
         if results[i]:
             results_successful_indexes.append(i)
 
-    results_index_tuples = [(i, j) for j in range(len(results[i])) for i in results_successful_indexes]
+    results_index_tuples = []
+    for i in results_successful_indexes:
+        for j in range(len(results[i])):
+            results_index_tuples.append((i, j))
+
+    assert len(results_index_tuples) > 0, "Length of results_index_tuples {l} should be greater than 0".format(l=len(results_index_tuples))
+    # results_index_tuples = [(i, j) for j in range(len(results[i])) for i in results_successful_indexes]
     results_iteration_order = random.sample(results_index_tuples, k=len(results_index_tuples))
 
     for i, j in results_iteration_order:
