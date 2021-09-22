@@ -174,7 +174,7 @@ def generate_triplets(paper_ids, coviews, margin_fraction, samples_per_query, ra
             results_index_tuples.append((i, j))
 
     assert len(results_index_tuples) > 0, "Length of results_index_tuples {l} should be greater than 0".format(l=len(results_index_tuples))
-    # results_index_tuples = [(i, j) for j in range(len(results[i])) for i in results_successful_indexes]
+
     results_iteration_order = random.sample(results_index_tuples, k=len(results_index_tuples))
 
     for i, j in results_iteration_order:
