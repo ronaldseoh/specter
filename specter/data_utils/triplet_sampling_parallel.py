@@ -37,7 +37,10 @@ _coviews = None
 _margin_fraction = None
 _paper_ids_set = None
 _samples_per_query = None
+_author_samples_per_query = None
 _ratio_hard_negatives = None
+_author_data = None
+_author_by_paper_data = None
 
 
 # def _get_triplet(query, coviews, margin_fraction, paper_ids_set, samples_per_query, ratio_hard_negatives):
@@ -46,7 +49,11 @@ def _get_triplet(query):
     global _margin_fraction
     global _paper_ids_set
     global _samples_per_query
+    global _author_samples_per_query
     global _ratio_hard_negatives
+    global _author_data
+    global _author_by_paper_data
+
     if query not in _coviews:
         raise KeyError(f'ID {id} should be in data.json'.format(id=query))
 
@@ -62,7 +69,6 @@ def _get_triplet(query):
     # If distance is 1 increase margin to 1 otherwise any margin_fraction will pass
     if is_int(candidates[0][1]) and is_int(candidates[-1][1]) and coview_spread == 1:
         margin = np.ceil(margin)
-
 
     results = []
 
@@ -135,25 +141,47 @@ def _get_triplet(query):
                 easy_samples.append([query, pos, (neg, float("-inf"))])
             results.extend(easy_samples)
 
+        # ---------- easy author triplets
+        if _author_data and _author_by_paper_data:
+            candidates_pos = []
+            for author in _author_by_paper_data[query]:
+                author_papers = _author_data[author]
+                author_papers.remove(query)
+                candidates_pos.extend(author_papers)
+
+            candidates_zero = list(_paper_ids_set.difference(candidates_pos + [query]))
+
+            if candidates and len(candidates_pos) > 0:
+                easy_author_samples: List = []
+                for i in range(n_easy_samples):
+                    pos = candidates_pos[np.random.randint(len(candidates_pos))]  # random good sample from candidates
+                    neg = candidates_zero[np.random.randint(len(candidates_zero))]  # random zero
+                    easy_author_samples.append([query, (pos, 5), (neg, float("-inf"))])
+                results.extend(easy_author_samples)
     return results
 
 
-def generate_triplets(paper_ids, coviews, margin_fraction, samples_per_query, ratio_hard_negatives, query_ids, data_subset=None, n_jobs=1):
+def generate_triplets(paper_ids, coviews, margin_fraction, samples_per_query, ratio_hard_negatives, query_ids, data_subset=None, n_jobs=1, author_data=None, author_paper_data=None):
     global _coviews  # data
     global _margin_fraction
     global _samples_per_query
     global _ratio_hard_negatives
     global _query_ids
     global _paper_ids_set  # metadata
+    global _author_data
+    global _author_by_paper_data
 
     _coviews = coviews
     _margin_fraction = margin_fraction
     _samples_per_query = samples_per_query
+    _author_samples_per_query = samples_per_query
     _ratio_hard_negatives = ratio_hard_negatives
     _query_ids = query_ids
     _paper_ids_set = set(paper_ids)
+    _author_data = author_data
+    _author_by_paper_data = author_paper_data
 
-    logger.info(f'generating triplets with: samples_per_query:{_samples_per_query},'
+    logger.info(f'generating triplets with: samples_per_query:{_samples_per_query}, author_samples_per_query:{_author_samples_per_query}'
                 f'ratio_hard_negatives:{_ratio_hard_negatives}, margin_fraction:{_margin_fraction}')
     if n_jobs == 1:
         results = [_get_triplet(query) for query in tqdm.tqdm(query_ids)]

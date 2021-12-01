@@ -169,13 +169,17 @@ class TrainingInstanceGenerator:
                  samples_per_query: int = 5,
                  margin_fraction: float = 0.5,
                  ratio_hard_negatives: float = 0.3,
-                 data_source: str = None):
+                 data_source: str = None,
+                 author_data = None,
+                 author_by_paper_data = None):
         self.samples_per_query = samples_per_query
         self.margin_fraction = margin_fraction
         self.ratio_hard_negatives = ratio_hard_negatives
         self.paper_feature_cache = {}
         self.metadata = metadata
         self.data_source = data_source
+        self.author_data = author_data
+        self.author_by_paper_data = author_by_paper_data
 
         self.data = data
         # self.triplet_generator = TripletGenerator(
@@ -222,7 +226,9 @@ class TrainingInstanceGenerator:
         for triplet in triplet_sampling_parallel.generate_triplets(list(self.metadata.keys()), self.data,
                                                             self.margin_fraction, self.samples_per_query,
                                                             self.ratio_hard_negatives, query_ids,
-                                                            data_subset=subset_name, n_jobs=n_jobs):
+                                                            data_subset=subset_name, n_jobs=n_jobs,
+                                                            author_data=self.author_data,
+                                                            author_paper_data=self.author_by_paper_data):
             try:
                 query_paper = self.metadata[triplet[0]]
                 pos_paper = self.metadata[triplet[1][0]]
@@ -266,7 +272,7 @@ class TrainingInstanceGenerator:
 
 def get_instances(data, query_ids_file, metadata, data_source=None, n_jobs=1, n_jobs_raw=12,
                   ratio_hard_negatives=0.3, margin_fraction=0.5, samples_per_query=5,
-                  concat_title_abstract=False, included_text_fields='title abstract'):
+                  concat_title_abstract=False, included_text_fields='title abstract', author_data=None, author_by_paper_data=None):
     """
     Gets allennlp instances from the data file
     Args:
@@ -289,7 +295,7 @@ def get_instances(data, query_ids_file, metadata, data_source=None, n_jobs=1, n_
 
     generator = TrainingInstanceGenerator(data=data, metadata=metadata, data_source=data_source,
                                           margin_fraction=margin_fraction, ratio_hard_negatives=ratio_hard_negatives,
-                                          samples_per_query=samples_per_query)
+                                          samples_per_query=samples_per_query, author_data=author_data, author_by_paper_data=author_by_paper_data)
 
     set_values(max_sequence_length=512,
                concat_title_abstract=concat_title_abstract,
@@ -319,7 +325,7 @@ def get_instances(data, query_ids_file, metadata, data_source=None, n_jobs=1, n_
 
 def main(data_files, train_ids, val_ids, test_ids, metadata_file, outdir, n_jobs=1, njobs_raw=1,
          margin_fraction=0.5, ratio_hard_negatives=0.3, samples_per_query=5, comment='', bert_vocab='',
-         concat_title_abstract=False, included_text_fields='title abstract'):
+         concat_title_abstract=False, included_text_fields='title abstract', author_data_file=None, author_by_paper_data_file=None):
     """
     Generates instances from a list of datafiles and stores them as a stream of objects
     Args:
@@ -350,6 +356,22 @@ def main(data_files, train_ids, val_ids, test_ids, metadata_file, outdir, n_jobs
     with open(metadata_file) as f_in:
         logger.info(f'loading metadata: {metadata_file}')
         metadata = json.load(f_in)
+    f_in.close()
+
+    author_data = None
+    author_by_paper_data = None
+
+    if author_data_file:
+        with open(author_data_file) as f_in:
+            logger.info(f'loading author data: {author_data_file}')
+            author_data = json.load(f_in)
+        f_in.close()
+
+    if author_by_paper_data_file:
+        with open(author_by_paper_data_file) as f_in:
+            logger.info(f'loading author by paper data: {author_by_paper_data_file}')
+            author_by_paper_data = json.load(f_in)
+        f_in.close()
 
     for data_file, train_set, val_set, test_set in zip(data_files, train_ids, val_ids, test_ids):
         logger.info(f'loading data file: {data_file}')
@@ -377,7 +399,9 @@ def main(data_files, train_ids, val_ids, test_ids, metadata_file, outdir, n_jobs
                                               ratio_hard_negatives=ratio_hard_negatives,
                                               samples_per_query=samples_per_query,
                                               concat_title_abstract=concat_title_abstract,
-                                              included_text_fields=included_text_fields):
+                                              included_text_fields=included_text_fields,
+                                              author_data=author_data,
+                                              author_by_paper_data=author_by_paper_data):
                     pickler.dump(instance)
                     idx += 1
                     # to prevent from memory blow
@@ -396,7 +420,7 @@ if __name__ == '__main__':
     ap.add_argument('--metadata', help='path to the metadata file')
     ap.add_argument('--outdir', help='output directory to files')
     ap.add_argument('--njobs', help='number of parallel jobs for instance conversion', default=1, type=int)
-    ap.add_argument('--njobs_raw', help='number of parallel jobs for triplet generation', default=12, type=int)
+    ap.add_argument('--njobs_raw', help='number of parallel jobs for triplet generation', default=1, type=int)
     ap.add_argument('--ratio_hard_negatives', default=0.3, type=float)
     ap.add_argument('--samples_per_query', default=5, type=int)
     ap.add_argument('--margin_fraction', default=0.5, type=float)
@@ -406,12 +430,18 @@ if __name__ == '__main__':
     ap.add_argument('--concat-title-abstract', action='store_true', default=False)
     ap.add_argument('--included-text-fields', default='title abstract', help='space delimieted list of fields to include in the main text field'
                                                                              'possible values: `title`, `abstract`, `authors`')
+    ap.add_argument('--include-author-data', help='whether to include author samples or not', action='store_true', default=False)
     args = ap.parse_args()
 
     data_file = os.path.join(args.data_dir, 'data.json')
     train_ids = os.path.join(args.data_dir, 'train.txt')
     val_ids = os.path.join(args.data_dir, 'val.txt')
     test_ids = os.path.join(args.data_dir, 'test.txt')
+    author_data_file = None
+    author_by_paper_data_file = None
+    if args.include_author_data:
+        author_data_file = os.path.join(args.data_dir, 'author_data.json')
+        author_by_paper_data_file = os.path.join(args.data_dir, 'author_by_paper_data.json')
 
     if args.metadata:
         metadata_file = args.metadata
@@ -422,5 +452,6 @@ if __name__ == '__main__':
     main([data_file], [train_ids], [val_ids], [test_ids], metadata_file, args.outdir, args.njobs, args.njobs_raw,
          margin_fraction=args.margin_fraction, ratio_hard_negatives=args.ratio_hard_negatives,
          samples_per_query=args.samples_per_query, comment=args.comment, bert_vocab=args.bert_vocab,
-         concat_title_abstract=args.concat_title_abstract, included_text_fields=args.included_text_fields
+         concat_title_abstract=args.concat_title_abstract, included_text_fields=args.included_text_fields,
+         author_data_file=author_data_file, author_by_paper_data_file=author_by_paper_data_file
          )
