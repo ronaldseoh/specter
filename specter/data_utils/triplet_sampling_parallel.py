@@ -33,6 +33,7 @@ def is_int(n):
     """ checks if a number is float. 2.0 is True while 0.3 is False"""
     return round(n) == n
 
+
 _coviews = None
 _margin_fraction = None
 _paper_ids_set = None
@@ -41,6 +42,7 @@ _author_samples_per_query = None
 _ratio_hard_negatives = None
 _author_data = None
 _author_by_paper_data = None
+_query_ids = None
 
 
 # def _get_triplet(query, coviews, margin_fraction, paper_ids_set, samples_per_query, ratio_hard_negatives):
@@ -98,7 +100,8 @@ def _get_triplet(query):
 
             for i in range(n_hard_samples):
                 # find the negative sample first.
-                neg = candidates_hard_neg[np.random.randint(len(candidates_hard_neg))]  # random neg sample from candidates
+                neg = candidates_hard_neg[
+                    np.random.randint(len(candidates_hard_neg))]  # random neg sample from candidates
 
                 candidates_pos = []
                 # find the good sample. find valid candidates by going through sorted list
@@ -161,10 +164,12 @@ def _get_triplet(query):
     return results
 
 
-def generate_triplets(paper_ids, coviews, margin_fraction, samples_per_query, ratio_hard_negatives, query_ids, data_subset=None, n_jobs=1, author_data=None, author_paper_data=None):
+def generate_triplets(paper_ids, coviews, margin_fraction, samples_per_query, ratio_hard_negatives, query_ids,
+                      data_subset=None, n_jobs=1, author_data=None, author_paper_data=None):
     global _coviews  # data
     global _margin_fraction
     global _samples_per_query
+    global _author_samples_per_query
     global _ratio_hard_negatives
     global _query_ids
     global _paper_ids_set  # metadata
@@ -181,14 +186,16 @@ def generate_triplets(paper_ids, coviews, margin_fraction, samples_per_query, ra
     _author_data = author_data
     _author_by_paper_data = author_paper_data
 
-    logger.info(f'generating triplets with: samples_per_query:{_samples_per_query}, author_samples_per_query:{_author_samples_per_query}'
-                f'ratio_hard_negatives:{_ratio_hard_negatives}, margin_fraction:{_margin_fraction}')
+    logger.info(
+        f'generating triplets with: samples_per_query:{_samples_per_query}, author_samples_per_query:{_author_samples_per_query}'
+        f'ratio_hard_negatives:{_ratio_hard_negatives}, margin_fraction:{_margin_fraction}')
     if n_jobs == 1:
         results = [_get_triplet(query) for query in tqdm.tqdm(query_ids)]
     elif n_jobs > 0:
         logger.info(f'running {n_jobs} parallel jobs to get triplets for {data_subset or "not-specified"} set')
         with Pool(n_jobs) as p:
-            # results = p.imap(_get_triplet, query, coviews, margin_fraction, paper_ids_set, samples_per_query, ratio_hard_negatives)
+            # results = p.imap(_get_triplet, query, coviews, margin_fraction, paper_ids_set, samples_per_query,
+            # ratio_hard_negatives)
             results = list(tqdm.tqdm(p.imap(_get_triplet, query_ids), total=len(query_ids)))
     else:
         raise RuntimeError(f"bad argument `n_jobs`={n_jobs}, `n_jobs` should be -1 or >0")
@@ -206,7 +213,8 @@ def generate_triplets(paper_ids, coviews, margin_fraction, samples_per_query, ra
         for j in range(len(results[i])):
             results_index_tuples.append((i, j))
 
-    assert len(results_index_tuples) > 0, "Length of results_index_tuples {l} should be greater than 0".format(l=len(results_index_tuples))
+    assert len(results_index_tuples) > 0, "Length of results_index_tuples {l} should be greater than 0".format(
+        l=len(results_index_tuples))
     # results_index_tuples = [(i, j) for j in range(len(results[i])) for i in results_successful_indexes]
     results_iteration_order = random.sample(results_index_tuples, k=len(results_index_tuples))
 

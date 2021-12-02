@@ -26,9 +26,8 @@ from specter.data_utils import triplet_sampling_parallel
 
 
 def init_logger(*, fn=None):
-
     # !!! here
-    from importlib import reload # python 2.x don't need to import reload, use it directly
+    from importlib import reload  # python 2.x don't need to import reload, use it directly
     reload(logging)
 
     logging_params = {
@@ -51,7 +50,6 @@ bert_params = {
 
 NO_VENUE = '--no_venue--'
 
-
 # ---------------
 # instead of a class with its own constructor we define global variables
 # and set their values using a `set_values` function
@@ -66,6 +64,7 @@ _max_sequence_length = None
 _concat_title_abstract = None
 _data_source = None
 _included_text_fields = None
+
 
 def set_values(max_sequence_length: Optional[int] = -1,
                concat_title_abstract: Optional[bool] = None,
@@ -97,10 +96,11 @@ def set_values(max_sequence_length: Optional[int] = -1,
 def get_text_tokens(title_tokens, abstract_tokens, abstract_delimiter):
     """ concats title and abstract using a delimiter"""
     if title_tokens[-1] != Token('.'):
-            title_tokens += [Token('.')]
+        title_tokens += [Token('.')]
 
     title_tokens = title_tokens + abstract_delimiter + abstract_tokens
     return title_tokens
+
 
 def get_instance(paper):
     global _tokenizer
@@ -161,6 +161,7 @@ def get_instance(paper):
 
     return Instance(fields)
 
+
 class TrainingInstanceGenerator:
 
     def __init__(self,
@@ -170,8 +171,8 @@ class TrainingInstanceGenerator:
                  margin_fraction: float = 0.5,
                  ratio_hard_negatives: float = 0.3,
                  data_source: str = None,
-                 author_data = None,
-                 author_by_paper_data = None):
+                 author_data=None,
+                 author_by_paper_data=None):
         self.samples_per_query = samples_per_query
         self.margin_fraction = margin_fraction
         self.ratio_hard_negatives = ratio_hard_negatives
@@ -191,7 +192,7 @@ class TrainingInstanceGenerator:
         # )
 
     def _get_paper_features(self, paper: Optional[dict] = None) -> \
-        Tuple[List[Token], List[Token]]:
+            Tuple[List[Token], List[Token]]:
         if paper:
             paper_id = paper.get('paper_id')
             if paper_id in self.paper_feature_cache:  # This function is being called by the same paper multiple times.
@@ -224,11 +225,11 @@ class TrainingInstanceGenerator:
         count_success, count_fail = 0, 0
         # instances = []
         for triplet in triplet_sampling_parallel.generate_triplets(list(self.metadata.keys()), self.data,
-                                                            self.margin_fraction, self.samples_per_query,
-                                                            self.ratio_hard_negatives, query_ids,
-                                                            data_subset=subset_name, n_jobs=n_jobs,
-                                                            author_data=self.author_data,
-                                                            author_paper_data=self.author_by_paper_data):
+                                                                   self.margin_fraction, self.samples_per_query,
+                                                                   self.ratio_hard_negatives, query_ids,
+                                                                   data_subset=subset_name, n_jobs=n_jobs,
+                                                                   author_data=self.author_data,
+                                                                   author_paper_data=self.author_by_paper_data):
             try:
                 query_paper = self.metadata[triplet[0]]
                 pos_paper = self.metadata[triplet[1][0]]
@@ -266,13 +267,15 @@ class TrainingInstanceGenerator:
                 # if there is no title and abstract skip this triplet
                 count_fail += 1
                 pass
-        logger.info(f"done getting triplets, success rate:{(count_success*100/(count_success+count_fail+0.001)):.2f}%,"
-                     f"total: {count_success+count_fail}")
+        logger.info(
+            f"done getting triplets, success rate:{(count_success * 100 / (count_success + count_fail + 0.001)):.2f}%,"
+            f"total: {count_success + count_fail}")
 
 
 def get_instances(data, query_ids_file, metadata, data_source=None, n_jobs=1, n_jobs_raw=12,
                   ratio_hard_negatives=0.3, margin_fraction=0.5, samples_per_query=5,
-                  concat_title_abstract=False, included_text_fields='title abstract', author_data=None, author_by_paper_data=None):
+                  concat_title_abstract=False, included_text_fields='title abstract', author_data=None,
+                  author_by_paper_data=None):
     """
     Gets allennlp instances from the data file
     Args:
@@ -295,7 +298,8 @@ def get_instances(data, query_ids_file, metadata, data_source=None, n_jobs=1, n_
 
     generator = TrainingInstanceGenerator(data=data, metadata=metadata, data_source=data_source,
                                           margin_fraction=margin_fraction, ratio_hard_negatives=ratio_hard_negatives,
-                                          samples_per_query=samples_per_query, author_data=author_data, author_by_paper_data=author_by_paper_data)
+                                          samples_per_query=samples_per_query, author_data=author_data,
+                                          author_by_paper_data=author_by_paper_data)
 
     set_values(max_sequence_length=512,
                concat_title_abstract=concat_title_abstract,
@@ -325,7 +329,8 @@ def get_instances(data, query_ids_file, metadata, data_source=None, n_jobs=1, n_
 
 def main(data_files, train_ids, val_ids, test_ids, metadata_file, outdir, n_jobs=1, njobs_raw=1,
          margin_fraction=0.5, ratio_hard_negatives=0.3, samples_per_query=5, comment='', bert_vocab='',
-         concat_title_abstract=False, included_text_fields='title abstract', author_data_file=None, author_by_paper_data_file=None):
+         concat_title_abstract=False, included_text_fields='title abstract', author_data_file=None,
+         author_by_paper_data_file=None):
     """
     Generates instances from a list of datafiles and stores them as a stream of objects
     Args:
@@ -412,11 +417,11 @@ def main(data_files, train_ids, val_ids, test_ids, metadata_file, outdir, n_jobs
             json.dump(metrics, f_out2, indent=2)
 
 
-
 if __name__ == '__main__':
 
     ap = argparse.ArgumentParser()
-    ap.add_argument('--data-dir', help='path to a directory containing `data.json`, `train.csv`, `dev.csv` and `test.csv` files')
+    ap.add_argument('--data-dir',
+                    help='path to a directory containing `data.json`, `train.csv`, `dev.csv` and `test.csv` files')
     ap.add_argument('--metadata', help='path to the metadata file')
     ap.add_argument('--outdir', help='output directory to files')
     ap.add_argument('--njobs', help='number of parallel jobs for instance conversion', default=1, type=int)
@@ -428,9 +433,11 @@ if __name__ == '__main__':
     ap.add_argument('--data_files', help='space delimted list of data files to override default', default=None)
     ap.add_argument('--bert_vocab', help='path to bert vocab', default='data/scibert_scivocab_uncased/vocab.txt')
     ap.add_argument('--concat-title-abstract', action='store_true', default=False)
-    ap.add_argument('--included-text-fields', default='title abstract', help='space delimieted list of fields to include in the main text field'
-                                                                             'possible values: `title`, `abstract`, `authors`')
-    ap.add_argument('--include-author-data', help='whether to include author samples or not', action='store_true', default=False)
+    ap.add_argument('--included-text-fields', default='title abstract',
+                    help='space delimieted list of fields to include in the main text field'
+                         'possible values: `title`, `abstract`, `authors`')
+    ap.add_argument('--include-author-data', help='whether to include author samples or not', action='store_true',
+                    default=True)
     args = ap.parse_args()
 
     data_file = os.path.join(args.data_dir, 'data.json')
