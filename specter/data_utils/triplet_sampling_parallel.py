@@ -149,7 +149,10 @@ def _get_triplet(query):
             candidates_pos = []
             for author in _author_by_paper_data[query]:
                 author_papers = _author_data[author]
-                author_papers.remove(query)
+                if query not in author_papers:
+                    logger.info(f"Query paper {query} not found for author {author}")
+                else:
+                    author_papers.remove(query)
                 candidates_pos.extend(author_papers)
 
             candidates_zero = list(_paper_ids_set.difference(candidates_pos + [query]))
