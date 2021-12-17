@@ -314,7 +314,7 @@ class Specter(pl.LightningModule):
         checkpoint_path = init_args.checkpoint_path
         logger.info(f'loading model from checkpoint: {checkpoint_path}')
 
-        self.hparams = init_args
+        self.hparams.update(vars(init_args))
         self.model = AutoModel.from_pretrained("allenai/scibert_scivocab_cased")
         self.tokenizer = AutoTokenizer.from_pretrained("allenai/scibert_scivocab_cased")
         self.tokenizer.model_max_length = self.model.config.max_position_embeddings
@@ -594,20 +594,21 @@ def main():
         )
 
         # second part of the path shouldn't be f-string
-        filepath = f'{args.save_dir}/version_{logger.version}/checkpoints/' + 'ep-{epoch}_avg_val_loss-{avg_val_loss:.3f}'
+        dirpath = f'{args.save_dir}/version_{logger.version}/checkpoints/'
+        filename = 'ep-{epoch}_avg_val_loss-{avg_val_loss:.3f}'
         checkpoint_callback = ModelCheckpoint(
-            filepath=filepath,
+            dirpath=dirpath,
+            filename=filename,
             save_top_k=1,
             verbose=True,
             monitor='avg_val_loss', # monitors metrics logged by self.log.
-            mode='min',
-            prefix=''
+            mode='min'
         )
 
         extra_train_params = get_train_params(args)
-
+        pl.trainer.trainer.Trainer.callbacks.append(checkpoint_callback)
         trainer = pl.Trainer(logger=logger,
-                             checkpoint_callback=checkpoint_callback,
+                             checkpoint_callback=True,
                              **extra_train_params)
 
         trainer.fit(model)
