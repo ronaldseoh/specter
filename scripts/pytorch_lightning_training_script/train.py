@@ -418,14 +418,29 @@ class Specter(pl.LightningModule):
         return [optimizer], [scheduler]
 
     def training_step(self, batch, batch_idx):
-        source_embedding = self.model(**batch[0])[1]
-        pos_embedding = self.model(**batch[1])[1]
-        neg_embedding = self.model(**batch[2])[1]
+        # source_mask = batch[0]['attention_mask']
+        pos_mask = batch[1]['attention_mask']
+        neg_mask = batch[2]['attention_mask']
 
-        loss = self.triple_loss(source_embedding, pos_embedding, neg_embedding)
+        source_output = self.model(**batch[0])
+        pos_output = self.model(**batch[1])
+        neg_output = self.model(**batch[2])
 
+        source_cls_embedding = source_output.pooler_output
+        pos_last_hidden_output, pos_cls_embedding = pos_output.last_hidden_state * pos_mask.unsqueeze(-1), pos_output.pooler_output
+        neg_last_hidden_output, neg_cls_embedding = neg_output.last_hidden_state * neg_mask.unsqueeze(-1), neg_output.pooler_output
+
+        pos_last_hidden_embedding = torch.mean(pos_last_hidden_output, dim=1)
+        neg_last_hidden_embedding = torch.mean(neg_last_hidden_output, dim=1)
+
+        cls_loss = self.triple_loss(source_cls_embedding, pos_cls_embedding, neg_cls_embedding)
+        lh_loss = self.triple_loss(source_cls_embedding, pos_last_hidden_embedding, neg_last_hidden_embedding)
+
+        loss = (1 - self.hparams.lh_loss_weight) * cls_loss + self.hparams.lh_loss_weight * lh_loss
         lr_scheduler = self.trainer.lr_schedulers[0]["scheduler"]
 
+        self.log('cls_loss', cls_loss, on_step=True, on_epoch=False, prog_bar=True, logger=True)
+        self.log('lh_loss', lh_loss, on_step=True, on_epoch=False, prog_bar=True, logger=True)
         self.log('train_loss', loss, on_step=True, on_epoch=False, prog_bar=True, logger=True)
         self.log('rate', lr_scheduler.get_last_lr()[-1], on_step=True, on_epoch=False, prog_bar=True, logger=True)
         return {"loss": loss}
@@ -494,6 +509,7 @@ def parse_args():
     parser.add_argument('--num_epochs', default=1, type=int)
     parser.add_argument("--lr", type=float, default=2e-5)
     parser.add_argument("--weight_decay", default=0.0, type=float, help="Weight decay if we apply some.")
+    parser.add_argument("--lh_loss_weight", default=0.1, type=float, help="Weight applied to loss calculated using last hidden state")
     parser.add_argument("--adam_epsilon", default=1e-8, type=float, help="Epsilon for Adam optimizer.")
     parser.add_argument("--warmup_steps", default=0, type=int, help="Linear warmup over warmup_steps.")
     parser.add_argument("--num_workers", default=4, type=int, help="kwarg passed to DataLoader")
