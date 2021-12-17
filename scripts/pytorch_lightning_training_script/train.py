@@ -496,7 +496,7 @@ def parse_args():
     parser.add_argument('--dev_file')
     parser.add_argument('--test_file')
     parser.add_argument('--train_size', type=int)
-    parser.add_argument('--val_size', type=int)
+    parser.add_argument('--dev_size', type=int)
     parser.add_argument('--test_size', type=int)
     parser.add_argument('--input_dir', default=None, help='optionally provide a directory of the data and train/test/dev files will be automatically detected')
     parser.add_argument('--batch_size', default=1, type=int)
