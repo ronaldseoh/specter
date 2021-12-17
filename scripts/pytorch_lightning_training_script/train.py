@@ -544,10 +544,6 @@ def parse_args():
 def get_train_params(args):
     train_params = {}
     train_params["precision"] = 16 if args.fp16 else 32
-    if (isinstance(args.gpus, int) and args.gpus > 1) or (isinstance(args.gpus, list ) and len(args.gpus) > 1):
-        train_params["distributed_backend"] = "ddp"
-    else:
-        train_params["distributed_backend"] = None
     train_params["accumulate_grad_batches"] = args.grad_accum
     train_params['track_grad_norm'] = -1
     train_params['limit_val_batches'] = args.limit_val_batches
