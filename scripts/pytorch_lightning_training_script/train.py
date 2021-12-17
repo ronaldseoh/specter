@@ -41,7 +41,7 @@ from allennlp.data.tokenizers.word_splitter import WordSplitter
 from allennlp.data.tokenizers.token import Token
 
 # Globe constants
-training_size = 684100
+# training_size = 684100
 # validation_size = 145375
 
 # log_every_n_steps how frequently pytorch lightning logs.
@@ -337,13 +337,13 @@ class Specter(pl.LightningModule):
     def _get_loader(self, split):
         if split == 'train':
             fname = self.hparams.train_file
-            size = self.training_size
+            size = self.hparams.train_size
         elif split == 'dev':
             fname = self.hparams.dev_file
-            size = self.validation_size
+            size = self.hparams.dev_size
         elif split == 'test':
             fname = self.hparams.test_file
-            size = self.test_size
+            size = self.hparams.test_size
         else:
             assert False
 
@@ -377,7 +377,7 @@ class Specter(pl.LightningModule):
         effective_batch_size = self.hparams.batch_size * self.hparams.grad_accum * num_devices
         # dataset_size = len(self.train_loader.dataset)
         """The size of the training data need to be coded with more accurate number"""
-        dataset_size = training_size
+        dataset_size = self.hparams.train_size
         return (dataset_size / effective_batch_size) * self.hparams.num_epochs
 
     def get_lr_scheduler(self):
@@ -495,6 +495,9 @@ def parse_args():
     parser.add_argument('--train_file')
     parser.add_argument('--dev_file')
     parser.add_argument('--test_file')
+    parser.add_argument('--train_size', type=int)
+    parser.add_argument('--val_size', type=int)
+    parser.add_argument('--test_size', type=int)
     parser.add_argument('--input_dir', default=None, help='optionally provide a directory of the data and train/test/dev files will be automatically detected')
     parser.add_argument('--batch_size', default=1, type=int)
     parser.add_argument('--grad_accum', default=1, type=int)
