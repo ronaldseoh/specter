@@ -314,7 +314,7 @@ class Specter(pl.LightningModule):
         checkpoint_path = init_args.checkpoint_path
         logger.info(f'loading model from checkpoint: {checkpoint_path}')
 
-        self.hparams.update(vars(init_args))
+        self.hparams = init_args
         self.model = AutoModel.from_pretrained("allenai/scibert_scivocab_cased")
         self.tokenizer = AutoTokenizer.from_pretrained("allenai/scibert_scivocab_cased")
         self.tokenizer.model_max_length = self.model.config.max_position_embeddings
@@ -544,6 +544,10 @@ def parse_args():
 def get_train_params(args):
     train_params = {}
     train_params["precision"] = 16 if args.fp16 else 32
+    if (isinstance(args.gpus, int) and args.gpus > 1) or (isinstance(args.gpus, list ) and len(args.gpus) > 1):
+        train_params["distributed_backend"] = "ddp"
+    else:
+        train_params["distributed_backend"] = None
     train_params["accumulate_grad_batches"] = args.grad_accum
     train_params['track_grad_norm'] = -1
     train_params['limit_val_batches'] = args.limit_val_batches
@@ -590,21 +594,20 @@ def main():
         )
 
         # second part of the path shouldn't be f-string
-        dirpath = f'{args.save_dir}/version_{logger.version}/checkpoints/'
-        filename = 'ep-{epoch}_avg_val_loss-{avg_val_loss:.3f}'
+        filepath = f'{args.save_dir}/version_{logger.version}/checkpoints/' + 'ep-{epoch}_avg_val_loss-{avg_val_loss:.3f}'
         checkpoint_callback = ModelCheckpoint(
-            dirpath=dirpath,
-            filename=filename,
+            filepath=filepath,
             save_top_k=1,
             verbose=True,
             monitor='avg_val_loss', # monitors metrics logged by self.log.
-            mode='min'
+            mode='min',
+            prefix=''
         )
 
         extra_train_params = get_train_params(args)
-        pl.trainer.trainer.Trainer.callbacks.append(checkpoint_callback)
+
         trainer = pl.Trainer(logger=logger,
-                             checkpoint_callback=True,
+                             checkpoint_callback=checkpoint_callback,
                              **extra_train_params)
 
         trainer.fit(model)
