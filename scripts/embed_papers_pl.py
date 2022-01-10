@@ -19,7 +19,7 @@ from pytorch_lightning_training_script.train import Specter
 class Dataset:
 
     def __init__(self, data_path, max_length=512, batch_size=32, device='cpu'):
-        self.tokenizer = AutoTokenizer.from_pretrained('allenai/specter')
+        self.tokenizer = AutoTokenizer.from_pretrained('allenai/scibert_scivocab_cased')
         self.max_length = max_length
         self.batch_size = batch_size
         self.device = device
@@ -66,7 +66,7 @@ class Model:
             # Get the Huggingface BERT model from pl_model
             self.model = pl_model.model
         else:
-            self.model = AutoModel.from_pretrained('allenai/specter')
+            self.model = AutoModel.from_pretrained('allenai/scibert_scivocab_cased')
 
         self.model.to(device)
         self.model.eval()
