@@ -13,7 +13,7 @@ import logging
 from tqdm.auto import tqdm
 from transformers import AutoTokenizer, AutoModel
 
-from specter import Specter
+from pytorch_lightning_training_script.train import Specter
 
 
 class Dataset:
