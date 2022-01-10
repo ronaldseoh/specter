@@ -91,7 +91,7 @@ def main():
 
     device = 'cuda' if args.cuda_device == 0 else 'cpu'
     dataset = Dataset(data_path=args.metadata, batch_size=args.batch_size, device=device)
-    model = Model(args.pl_checkpoint_path, device=device)
+    model = Model(args.model_checkpoint_path, device=device)
     results = {}
     batches = []
     for batch, batch_ids in tqdm(dataset.batches(), total=len(dataset) // args.batch_size):
@@ -101,7 +101,7 @@ def main():
             results[paper_id] = {"paper_id": paper_id, "embedding": embedding.detach().cpu().numpy().tolist()}
 
     pathlib.Path(args.output_file).parent.mkdir(parents=True, exist_ok=True)
-    with open(args.output, 'w') as fout:
+    with open(args.output_file, 'w') as fout:
         for res in results.values():
             fout.write(json.dumps(res) + '\n')
 
