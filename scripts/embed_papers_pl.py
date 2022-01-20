@@ -39,7 +39,7 @@ class Dataset:
         batch_size = self.batch_size
         i = 0
         for k, d in self.data.items():
-            if (i) % batch_size != 0 or i == 0:
+            if i % batch_size != 0 or i == 0:
                 batch_ids.append(k)
                 batch.append(d['title'] + ' ' + (d.get('abstract') or ''))
             else:
@@ -73,7 +73,7 @@ class Model:
 
     def __call__(self, input_ids):
         output = self.model(**input_ids)
-        return output.last_hidden_state[:, 0, :]  # cls token
+        return output[1]  # cls token
 
 def main():
     parser = argparse.ArgumentParser()
@@ -81,8 +81,8 @@ def main():
     parser.add_argument('--model-checkpoint-path', help='path to the model')
     parser.add_argument('--metadata', help='path to the paper metadata')
     parser.add_argument('--output-file', help='path to the output file')
-    parser.add_argument('--cuda-device', default=0, type=str)
-    parser.add_argument('--batch-size', default=1, type=str)
+    parser.add_argument('--cuda-device', default=0, type=int)
+    parser.add_argument('--batch-size', default=1, type=int)
     parser.add_argument('--vocab-dir', default='data/vocab/')
     parser.add_argument('--py_path', default="~/anaconda3/bin/python")
     parser.add_argument('--specter_folder', default=".")
