@@ -98,6 +98,17 @@ def _get_triplet(query):
             if (pos_len * neg_len) < n_hard_samples:
                 n_hard_samples = pos_len * neg_len
 
+            # generate positive samples from the author data
+            author_candidates_pos = []
+            if _author_data and _author_by_paper_data:
+                for author in _author_by_paper_data[query]:
+                    author_papers = _author_data[author]
+                    if query not in author_papers:
+                        logger.info(f"Query paper {query} not found for author {author}")
+                    else:
+                        author_papers.remove(query)
+                    author_candidates_pos.extend(author_papers)
+
             for i in range(n_hard_samples):
                 # find the negative sample first.
                 neg = candidates_hard_neg[
@@ -116,6 +127,12 @@ def _get_triplet(query):
 
                     # append the good and bad samples with their coview number to output
                     results.append([query, pos, neg])
+                if author_candidates_pos:
+                    author_pos = author_candidates_pos[np.random.randint(len(author_candidates_pos))]  # random good sample from candidates
+                    citation_neg = candidates_hard_neg[
+                        np.random.randint(len(candidates_hard_neg))]  # random neg sample from candidates
+                    results.append([query, (author_pos, 5), citation_neg])
+
 
         n_easy_samples = _samples_per_query - len(results)
 
@@ -146,22 +163,13 @@ def _get_triplet(query):
 
         # ---------- easy author triplets
         if _author_data and _author_by_paper_data:
-            candidates_pos = []
-            for author in _author_by_paper_data[query]:
-                author_papers = _author_data[author]
-                if query not in author_papers:
-                    logger.info(f"Query paper {query} not found for author {author}")
-                else:
-                    author_papers.remove(query)
-                candidates_pos.extend(author_papers)
+            author_candidates_zero = list(_paper_ids_set.difference(author_candidates_pos + [query]))
 
-            candidates_zero = list(_paper_ids_set.difference(candidates_pos + [query]))
-
-            if candidates and len(candidates_pos) > 0:
+            if candidates and len(author_candidates_pos) > 0:
                 easy_author_samples: List = []
                 for i in range(n_easy_samples):
-                    pos = candidates_pos[np.random.randint(len(candidates_pos))]  # random good sample from candidates
-                    neg = candidates_zero[np.random.randint(len(candidates_zero))]  # random zero
+                    pos = author_candidates_pos[np.random.randint(len(author_candidates_pos))]  # random good sample from candidates
+                    neg = author_candidates_zero[np.random.randint(len(author_candidates_zero))]  # random zero
                     easy_author_samples.append([query, (pos, 5), (neg, float("-inf"))])
                 results.extend(easy_author_samples)
     return results
