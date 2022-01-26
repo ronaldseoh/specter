@@ -263,9 +263,11 @@ class TrainingInstanceGenerator:
                     "data_source": self.data_source
                 }
                 yield instance
-            except KeyError:
+            except KeyError as e:
                 # if there is no title and abstract skip this triplet
                 count_fail += 1
+                print(repr(e))
+                print(triplet)
                 pass
         logger.info(
             f"done getting triplets, success rate:{(count_success * 100 / (count_success + count_fail + 0.001)):.2f}%,"
