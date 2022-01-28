@@ -140,7 +140,7 @@ def _get_triplet(query):
                             np.random.randint(len(candidates_hard_neg))]  # random neg sample from candidates
                         results.append([query, (author_pos, 5), citation_neg])
 
-        n_easy_samples = _samples_per_query - len(n_hard_samples)
+        n_easy_samples = _samples_per_query - n_hard_samples
 
         # ---------- easy triplets
 
@@ -177,13 +177,12 @@ def _get_triplet(query):
                     pos = author_candidates_pos[np.random.randint(len(author_candidates_pos))]  # random good sample from candidates
                     while pos not in _paper_ids_set and len(author_candidates_pos) > 1:
                         author_candidates_pos.remove(pos)
+                        print("{paper} not found in metadata, resampling".format(paper=pos))
                         pos = author_candidates_pos[np.random.randint(len(author_candidates_pos))]  # resample if pos not in metadata
                     if pos in _paper_ids_set:
                         neg = author_candidates_zero[np.random.randint(len(author_candidates_zero))]  # random zero
                         easy_author_samples.append([query, (pos, 5), (neg, float("-inf"))])
                 results.extend(easy_author_samples)
-    print(query)
-    print(results)
     return results
 
 
