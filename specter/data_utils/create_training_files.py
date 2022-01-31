@@ -172,7 +172,11 @@ class TrainingInstanceGenerator:
                  ratio_hard_negatives: float = 0.3,
                  data_source: str = None,
                  author_data=None,
-                 author_by_paper_data=None):
+                 author_by_paper_data=None,
+                 hard_citation=True,
+                 easy_citation=True,
+                 hard_author=True,
+                 easy_author=True):
         self.samples_per_query = samples_per_query
         self.margin_fraction = margin_fraction
         self.ratio_hard_negatives = ratio_hard_negatives
@@ -181,6 +185,10 @@ class TrainingInstanceGenerator:
         self.data_source = data_source
         self.author_data = author_data
         self.author_by_paper_data = author_by_paper_data
+        self.hard_citation = hard_citation
+        self.easy_citation = easy_citation
+        self.hard_author = hard_author
+        self.easy_author = easy_author
 
         self.data = data
         # self.triplet_generator = TripletGenerator(
@@ -229,7 +237,11 @@ class TrainingInstanceGenerator:
                                                                    self.ratio_hard_negatives, query_ids,
                                                                    data_subset=subset_name, n_jobs=n_jobs,
                                                                    author_data=self.author_data,
-                                                                   author_paper_data=self.author_by_paper_data):
+                                                                   author_paper_data=self.author_by_paper_data,
+                                                                   hard_citation=self.hard_citation,
+                                                                   easy_citation=self.easy_citation,
+                                                                   hard_author=self.hard_author,
+                                                                   easy_author=self.easy_author):
             try:
                 query_paper = self.metadata[triplet[0]]
                 pos_paper = self.metadata[triplet[1][0]]
@@ -277,7 +289,7 @@ class TrainingInstanceGenerator:
 def get_instances(data, query_ids_file, metadata, data_source=None, n_jobs=1, n_jobs_raw=12,
                   ratio_hard_negatives=0.3, margin_fraction=0.5, samples_per_query=5,
                   concat_title_abstract=False, included_text_fields='title abstract', author_data=None,
-                  author_by_paper_data=None):
+                  author_by_paper_data=None, hard_citation=True, easy_citation=True, hard_author=True, easy_author=True):
     """
     Gets allennlp instances from the data file
     Args:
@@ -301,7 +313,8 @@ def get_instances(data, query_ids_file, metadata, data_source=None, n_jobs=1, n_
     generator = TrainingInstanceGenerator(data=data, metadata=metadata, data_source=data_source,
                                           margin_fraction=margin_fraction, ratio_hard_negatives=ratio_hard_negatives,
                                           samples_per_query=samples_per_query, author_data=author_data,
-                                          author_by_paper_data=author_by_paper_data)
+                                          author_by_paper_data=author_by_paper_data, hard_citation=hard_citation,
+                                          easy_citation=easy_citation, hard_author=hard_author, easy_author=easy_author)
 
     set_values(max_sequence_length=512,
                concat_title_abstract=concat_title_abstract,
@@ -332,7 +345,8 @@ def get_instances(data, query_ids_file, metadata, data_source=None, n_jobs=1, n_
 def main(data_files, train_ids, val_ids, test_ids, metadata_file, outdir, n_jobs=1, njobs_raw=1,
          margin_fraction=0.5, ratio_hard_negatives=0.3, samples_per_query=5, comment='', bert_vocab='',
          concat_title_abstract=False, included_text_fields='title abstract', author_data_file=None,
-         author_by_paper_data_file=None):
+         author_by_paper_data_file=None, hard_citation=True, easy_citation=True,
+         hard_author=True, easy_author=True):
     """
     Generates instances from a list of datafiles and stores them as a stream of objects
     Args:
@@ -408,7 +422,11 @@ def main(data_files, train_ids, val_ids, test_ids, metadata_file, outdir, n_jobs
                                               concat_title_abstract=concat_title_abstract,
                                               included_text_fields=included_text_fields,
                                               author_data=author_data,
-                                              author_by_paper_data=author_by_paper_data):
+                                              author_by_paper_data=author_by_paper_data,
+                                              hard_citation=hard_citation,
+                                              easy_citation=easy_citation,
+                                              hard_author=hard_author,
+                                              easy_author=easy_author):
                     pickler.dump(instance)
                     idx += 1
                     # to prevent from memory blow
@@ -439,7 +457,15 @@ if __name__ == '__main__':
                     help='space delimieted list of fields to include in the main text field'
                          'possible values: `title`, `abstract`, `authors`')
     ap.add_argument('--include-author-data', help='whether to include author samples or not', action='store_true',
-                    default=True)
+                    default=False)
+    ap.add_argument('--hard-citation', help='whether to include hard citation samples or not', action='store_true',
+                    default=False)
+    ap.add_argument('--hard-author', help='whether to include hard author samples or not', action='store_true',
+                    default=False)
+    ap.add_argument('--easy-citation', help='whether to include easy citation samples or not', action='store_true',
+                    default=False)
+    ap.add_argument('--easy-author', help='whether to include easy author samples or not', action='store_true',
+                    default=False)
     args = ap.parse_args()
 
     data_file = os.path.join(args.data_dir, 'data.json')
@@ -462,5 +488,7 @@ if __name__ == '__main__':
          margin_fraction=args.margin_fraction, ratio_hard_negatives=args.ratio_hard_negatives,
          samples_per_query=args.samples_per_query, comment=args.comment, bert_vocab=args.bert_vocab,
          concat_title_abstract=args.concat_title_abstract, included_text_fields=args.included_text_fields,
-         author_data_file=author_data_file, author_by_paper_data_file=author_by_paper_data_file
+         author_data_file=author_data_file, author_by_paper_data_file=author_by_paper_data_file,
+         hard_citation=args.hard_citation, easy_citation=args.easy_citation,
+         hard_author=args.hard_author, easy_author=args.easy_author
          )
