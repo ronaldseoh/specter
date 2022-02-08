@@ -106,6 +106,7 @@ def _get_triplet(query):
 
             # generate positive samples from the author data
             author_candidates_pos = []
+            author_candidates_neg = []
             query_authors = _author_by_paper_data[query]
             if _author_data and _author_by_paper_data:
                 for author in query_authors:
@@ -118,7 +119,6 @@ def _get_triplet(query):
 
                 if _author_hard_neg:
                     co_authors = set()
-                    author_candidates_neg = []
                     for paper in author_candidates_pos:
                         co_authors.update(set(_author_by_paper_data[paper]).difference(set(query_authors)))
                     for author in co_authors:
@@ -147,7 +147,7 @@ def _get_triplet(query):
                     author_pos = author_candidates_pos[np.random.randint(len(author_candidates_pos))]  # random good sample from candidates
                     assert author_pos in _paper_ids_set
 
-                    if _author_hard_neg:
+                    if _author_hard_neg and len(author_candidates_neg) > 0:
                         author_neg = (author_candidates_neg[np.random.randint(len(author_candidates_neg))], 1)
                     else:
                         author_neg = candidates_hard_neg[
