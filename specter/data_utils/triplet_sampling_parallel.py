@@ -3,19 +3,15 @@ This is identical to the original triplet_sampling.py code but optimized to run 
 The script reads the coview/co-citation data and returns them as triplet format
 i.e., ['Query_paper', ('Positive_paper_id', num-coviews), ('Negative_paper_id', num_coviews)
 """
-import functools
-import multiprocessing
-import operator
-from typing import List, Tuple, Dict, Optional, Generator, NoReturn, Iterator
-
-import math
-import numpy as np
 import logging
-import tqdm
+import math
+import operator
 import random
-
 from multiprocessing import Pool
-import multiprocessing
+from typing import List
+
+import numpy as np
+import tqdm
 
 logger = logging.getLogger(__file__)  # pylint: disable=invalid-name
 logger.setLevel(logging.INFO)
@@ -120,6 +116,14 @@ def _get_triplet(query):
                         author_papers.remove(query)
                     author_candidates_pos.extend(author_papers)
 
+                if _author_hard_neg:
+                    co_authors = set()
+                    author_candidates_neg = []
+                    for paper in author_candidates_pos:
+                        co_authors.update(set(_author_by_paper_data[paper]).difference(set(query_authors)))
+                    for author in co_authors:
+                        author_candidates_neg.extend(set(_author_data[author]).difference(set(author_candidates_pos)))
+
             for i in range(n_hard_samples):
                 # find the negative sample first.
                 neg = candidates_hard_neg[
@@ -144,12 +148,6 @@ def _get_triplet(query):
                     assert author_pos in _paper_ids_set
 
                     if _author_hard_neg:
-                        co_authors = set()
-                        author_candidates_neg = []
-                        for paper in author_candidates_pos:
-                            co_authors.update(set(_author_by_paper_data[paper]).difference(set(query_authors)))
-                        for author in co_authors:
-                            author_candidates_neg.extend(set(_author_data[author]).difference(set(author_candidates_pos)))
                         author_neg = (author_candidates_neg[np.random.randint(len(author_candidates_neg))], 1)
                     else:
                         author_neg = candidates_hard_neg[
