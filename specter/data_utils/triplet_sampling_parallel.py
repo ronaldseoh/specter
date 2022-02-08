@@ -47,6 +47,7 @@ _hard_citation = None
 _easy_citation = None
 _hard_author = None
 _easy_author = None
+_author_hard_neg = None
 
 
 # def _get_triplet(query, coviews, margin_fraction, paper_ids_set, samples_per_query, ratio_hard_negatives):
@@ -63,6 +64,7 @@ def _get_triplet(query):
     global _easy_citation
     global _hard_author
     global _easy_author
+    global _author_hard_neg
 
     if query not in _coviews:
         raise KeyError(f'ID {id} should be in data.json'.format(id=query))
@@ -108,8 +110,9 @@ def _get_triplet(query):
 
             # generate positive samples from the author data
             author_candidates_pos = []
+            query_authors = _author_by_paper_data[query]
             if _author_data and _author_by_paper_data:
-                for author in _author_by_paper_data[query]:
+                for author in query_authors:
                     author_papers = _author_data[author].copy()
                     if query not in author_papers:
                         logger.info(f"Query paper {query} not found for author {author}")
@@ -140,9 +143,18 @@ def _get_triplet(query):
                     author_pos = author_candidates_pos[np.random.randint(len(author_candidates_pos))]  # random good sample from candidates
                     assert author_pos in _paper_ids_set
 
-                    citation_neg = candidates_hard_neg[
-                        np.random.randint(len(candidates_hard_neg))]  # random neg sample from candidates
-                    results.append([query, (author_pos, 5), citation_neg])
+                    if _author_hard_neg:
+                        co_authors = set()
+                        author_candidates_neg = []
+                        for paper in author_candidates_pos:
+                            co_authors.update(set(_author_by_paper_data[paper]).difference(set(query_authors)))
+                        for author in co_authors:
+                            author_candidates_neg.extend(set(_author_data[author]).difference(set(author_candidates_pos)))
+                        author_neg = (author_candidates_neg[np.random.randint(len(author_candidates_neg))], 1)
+                    else:
+                        author_neg = candidates_hard_neg[
+                            np.random.randint(len(candidates_hard_neg))]  # random neg sample from candidates
+                    results.append([query, (author_pos, 5), author_neg])
 
         n_easy_samples = _samples_per_query - n_hard_samples
 
@@ -188,7 +200,7 @@ def _get_triplet(query):
 
 def generate_triplets(paper_ids, coviews, margin_fraction, samples_per_query, ratio_hard_negatives, query_ids,
                       data_subset=None, n_jobs=1, author_data=None, author_paper_data=None,
-                      hard_citation=True, easy_citation=True, hard_author=True, easy_author=True):
+                      hard_citation=True, easy_citation=True, hard_author=True, easy_author=True, hard_author_neg=False):
     global _coviews  # data
     global _margin_fraction
     global _samples_per_query
@@ -202,6 +214,7 @@ def generate_triplets(paper_ids, coviews, margin_fraction, samples_per_query, ra
     global _easy_citation
     global _hard_author
     global _easy_author
+    global _author_hard_neg
 
     _coviews = coviews
     _margin_fraction = margin_fraction
@@ -216,6 +229,7 @@ def generate_triplets(paper_ids, coviews, margin_fraction, samples_per_query, ra
     _easy_citation = easy_citation
     _hard_author = hard_author
     _easy_author = easy_author
+    _author_hard_neg = hard_author_neg
 
     logger.info(
         f'generating triplets with: samples_per_query:{_samples_per_query}, author_samples_per_query:{_author_samples_per_query}'
