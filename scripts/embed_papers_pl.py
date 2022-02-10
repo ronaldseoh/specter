@@ -93,12 +93,23 @@ def main():
     dataset = Dataset(data_path=args.metadata, batch_size=args.batch_size, device=device)
     model = Model(args.model_checkpoint_path, device=device)
     results = {}
-    batches = []
+
     for batch, batch_ids in tqdm(dataset.batches(), total=len(dataset) // args.batch_size):
-        batches.append(batch)
         emb = model(batch)
+        if model.hparams.model_behavior == "specter":
+            emb = emb.unsqueeze(dim=1)
+
         for paper_id, embedding in zip(batch_ids, emb.unbind()):
-            results[paper_id] = {"paper_id": paper_id, "embedding": embedding.detach().cpu().numpy().tolist()}
+
+            if len(embedding.shape) == 1:
+                results[paper_id] = {"paper_id": paper_id, "embedding": embedding.detach().cpu().numpy().tolist()}
+            else:
+                embedding_list = list(embedding.unbind())  # list of vectors
+
+                for i in range(len(embedding_list)):
+                    embedding_list[i] = embedding_list[i].detach().cpu().numpy().tolist()
+
+                results[paper_id] = {"paper_id": paper_id, "embedding": embedding_list}
 
     pathlib.Path(args.output_file).parent.mkdir(parents=True, exist_ok=True)
     with open(args.output_file, 'w') as fout:
