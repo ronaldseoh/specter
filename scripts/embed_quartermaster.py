@@ -87,13 +87,22 @@ if __name__ == '__main__':
 
     parser = argparse.ArgumentParser()
 
-    parser.add_argument('--pl-checkpoint-path', help='path to the checkpoint saved from train_quartermaster.py.')
-    parser.add_argument('--data-path', help='path to a json file containing paper metadata')
+    parser.add_argument('--ids', help='path to the paper ids file to embed')
+    parser.add_argument('--model-checkpoint-path', help='path to the model')
+    parser.add_argument('--metadata', help='path to the paper metadata')
+    parser.add_argument('--output-file', help='path to the output file')
+    parser.add_argument('--cuda-device', default=0, type=int)
+    parser.add_argument('--batch-size', default=1, type=int)
+    parser.add_argument('--vocab-dir', default='data/vocab/')
+    parser.add_argument('--py_path', default="~/anaconda3/bin/python")
+    parser.add_argument('--specter_folder', default=".")
+    # parser.add_argument('--pl-checkpoint-path', help='path to the checkpoint saved from train_quartermaster.py.')
+    # parser.add_argument('--data-path', help='path to a json file containing paper metadata')
 
     parser.add_argument('--seed', default=1918, type=int)
-    parser.add_argument('--batch-size', type=int, default=8, help='batch size for prediction')
-    parser.add_argument('--output', help='path to write the output embeddings file. '
-                                        'the output format is jsonlines where each line has "paper_id" and "embedding" keys')
+    # parser.add_argument('--batch-size', type=int, default=8, help='batch size for prediction')
+    # parser.add_argument('--output', help='path to write the output embeddings file. '
+    #                                     'the output format is jsonlines where each line has "paper_id" and "embedding" keys')
 
     args = parser.parse_args()
 
@@ -103,13 +112,13 @@ if __name__ == '__main__':
     pl.seed_everything(args.seed, workers=True)
 
     # Load the Lightning module from the checkpoint
-    model = QuarterMaster.load_from_checkpoint(args.pl_checkpoint_path)
+    model = QuarterMaster.load_from_checkpoint(args.model_checkpoint_path)
 
     # Put model in the eval mode
     model.eval()
 
     # Create a Dataset using the tokenizer and other settings in the lightning model
-    dataset = Dataset(pl_model=model, data_path=args.data_path, batch_size=args.batch_size)
+    dataset = Dataset(pl_model=model, data_path=args.metadata, batch_size=args.batch_size)
 
     results = {}
 
@@ -134,7 +143,7 @@ if __name__ == '__main__':
 
                 results[paper_id] =  {"paper_id": paper_id, "embedding": embedding_list}
 
-    pathlib.Path(args.output).parent.mkdir(parents=True, exist_ok=True)
+    pathlib.Path(args.output_file).parent.mkdir(parents=True, exist_ok=True)
 
     with open(args.output, 'w') as fout:
         for res in results.values():
